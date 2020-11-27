@@ -1,3 +1,4 @@
+import collections
 import inspect
 import typing
 import pydantic
@@ -41,20 +42,7 @@ class Trigger:
 trigger = Trigger.trigger
 
 
-class FormMeta(wtforms.meta.DefaultMeta):
-
-    def render_field(inst, field, render_kw):
-        class_ = "form-control"
-        if field.errors:
-            class_ += " is-invalid"
-        render_kw.update({"class_": class_})
-        return field.widget(field, **render_kw)
-
-
 class Form(wtforms.form.BaseForm):
-
-    def __init__(self, fields, prefix="", meta=FormMeta()):
-        super().__init__(fields, prefix, meta)
 
     @classmethod
     def from_model(cls, model: pydantic.BaseModel,
@@ -62,6 +50,21 @@ class Form(wtforms.form.BaseForm):
         return cls(Converter.convert(
             model_fields(model, only=only, exclude=exclude), **overrides
         ))
+
+
+class FormViewMeta(type):
+
+    def __init__(cls, name, bases, attrs):
+        type.__init__(cls, name, bases, attrs)
+        cls.triggers = None
+
+    def __call__(cls, *args, **kwargs):
+        if cls.triggers is None:
+            triggers = list(Trigger.triggers(cls))
+            triggers.sort(key=lambda trigger: trigger[1].order)
+            cls.triggers = collections.OrderedDict(triggers)
+
+        return type.__call__(cls, *args, **kwargs)
 
 
 class FormView(APIView, metaclass=FormViewMeta):
