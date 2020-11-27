@@ -1,11 +1,7 @@
 import collections
 import inspect
 import typing
-import pydantic
-import wtforms
 from dataclasses import dataclass
-from horseman.meta import APIView
-from wtforms_pydantic.converter import Converter, model_fields
 
 
 @dataclass
@@ -39,19 +35,6 @@ class Trigger:
             yield name, func.trigger
 
 
-trigger = Trigger.trigger
-
-
-class Form(wtforms.form.BaseForm):
-
-    @classmethod
-    def from_model(cls, model: pydantic.BaseModel,
-                   only=(), exclude=(), **overrides):
-        return cls(Converter.convert(
-            model_fields(model, only=only, exclude=exclude), **overrides
-        ))
-
-
 class FormViewMeta(type):
 
     def __init__(cls, name, bases, attrs):
@@ -65,19 +48,3 @@ class FormViewMeta(type):
             cls.triggers = collections.OrderedDict(triggers)
 
         return type.__call__(cls, *args, **kwargs)
-
-
-class FormView(APIView, metaclass=FormViewMeta):
-
-    title: str = ""
-    description: str = ""
-    action: str = ""
-    method: str = "POST"
-
-    def process_action(self, request):
-        data = request.get_data()
-        if action := data['form'].get("form.trigger"):
-            if (trigger := self.triggers.get(action)) is not None:
-                del data['form']["form.trigger"]
-                return trigger(self, request)
-        raise KeyError("No action found")
