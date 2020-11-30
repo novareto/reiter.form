@@ -32,7 +32,7 @@ class Trigger:
     def triggers(cls):
         for name, func in inspect.getmembers(cls, predicate=(
                 lambda x: inspect.isfunction(x) and hasattr(x, 'trigger'))):
-            yield name, func.trigger
+            yield func.trigger.id, func.trigger
 
 
 class FormViewMeta(type):
