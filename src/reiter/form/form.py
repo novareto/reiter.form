@@ -24,8 +24,8 @@ class FormView(APIView, metaclass=FormViewMeta):
 
     def process_action(self, request: Overhead):
         data = request.get_data()
-        if action := data['form'].get("form.trigger"):
+        if action := data.form.get("form.trigger"):
             if (trigger := self.triggers.get(action)) is not None:
-                del data['form']["form.trigger"]
-                return trigger(self, request)
+                del data.form["form.trigger"]
+                return trigger(self, request, data)
         raise KeyError("No action found")
