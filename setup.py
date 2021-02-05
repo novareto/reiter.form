@@ -6,6 +6,7 @@ version = "0.1"
 
 install_requires = [
     'horseman',
+    'reiter.form',
     'wtforms',
     'wtforms_pydantic'
 ]

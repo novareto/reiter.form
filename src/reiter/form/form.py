@@ -1,8 +1,9 @@
 import wtforms
 import pydantic
 from horseman.meta import Overhead, APIView
-from wtforms_pydantic.converter import Converter, model_fields
+from reiter.view.meta import View
 from reiter.form.meta import FormViewMeta
+from wtforms_pydantic.converter import Converter, model_fields
 
 
 class Form(wtforms.form.BaseForm):
@@ -15,7 +16,7 @@ class Form(wtforms.form.BaseForm):
         ))
 
 
-class FormView(APIView, metaclass=FormViewMeta):
+class FormView(View, metaclass=FormViewMeta):
 
     title: str = ""
     description: str = ""

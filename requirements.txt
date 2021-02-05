@@ -1,3 +1,4 @@
 wtforms
 git+git@github.com:trollfot/horseman.git#egg=horseman
 git+git@github.com:novareto/wtforms_pydantic.git#wtforms_pydantic
+git+git@github.com:novareto/reiter.view.git#reiter.view
