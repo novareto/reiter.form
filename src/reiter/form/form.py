@@ -23,6 +23,10 @@ class FormView(View, metaclass=FormViewMeta):
     action: str = ""
     method: str = "POST"
 
+    def POST(self):
+        self.request.extract()
+        return self.process_action(self.request)
+
     def process_action(self, request: Overhead):
         data = request.get_data()
         if action := data.form.get("form.trigger", None):
