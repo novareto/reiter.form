@@ -43,6 +43,7 @@ class FormView(View, metaclass=FormViewMeta):
         return {
             "actions": dict(self.filtered_triggers(request)),
             "view": self,
+            "errors": None,
             "path": request.route.path,
             **extra
         }
