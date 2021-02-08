@@ -24,8 +24,24 @@ class FormView(APIView, metaclass=FormViewMeta):
 
     def process_action(self, request: Overhead):
         data = request.get_data()
-        if action := data.form.get("form.trigger"):
+        if action := data.form.get("form.trigger", None):
+            del data.form["form.trigger"]
             if (trigger := self.triggers.get(action)) is not None:
-                del data.form["form.trigger"]
+                if trigger.condition and not trigger.condition(self, request):
+                    raise LookupError('Action is not allowed.')
                 return trigger(self, request, data)
         raise KeyError("No action found")
+
+    def filtered_triggers(self, request):
+        for name, trigger in self.triggers.items():
+            if trigger.condition and not trigger.condition(self, request):
+                continue
+            yield name, trigger
+
+    def namespace(self, request, **extra):
+        return {
+            "actions": dict(self.filtered_triggers(request)),
+            "view": self,
+            "path": request.route.path,
+            **extra
+        }

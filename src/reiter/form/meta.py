@@ -2,6 +2,10 @@ import collections
 import inspect
 import typing
 from dataclasses import dataclass
+from horseman.meta import Overhead
+
+
+Condition = typing.Callable[..., bool]
 
 
 @dataclass
@@ -11,19 +15,21 @@ class Trigger:
     method: typing.Callable
     css: str
     order: int
+    condition: Condition = None
 
     def __call__(self, *args, **kwargs):
         return self.method(*args, **kwargs)
 
     @classmethod
-    def trigger(cls, id, title, css="btn btn-primary", order=10):
+    def trigger(cls, id, title, css="", order=10, condition=None):
         def mark_as_trigger(func):
             func.trigger = cls(
                 id=f'trigger.{id}',
                 title=title,
                 css=css,
                 method=func,
-                order=order
+                order=order,
+                condition=condition
             )
             return func
         return mark_as_trigger
