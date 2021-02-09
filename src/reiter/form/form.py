@@ -43,11 +43,12 @@ class FormView(View, metaclass=FormViewMeta):
                 continue
             yield name, trigger
 
-    def namespace(self, request, **extra):
+    def namespace(self, **extra):
         return {
-            "actions": dict(self.filtered_triggers(request)),
-            "view": self,
+            "actions": dict(self.filtered_triggers(self.request)),
             "errors": None,
-            "path": request.route.path,
+            "path": self.request.route.path,
+            "request": self.request,
+            "view": self,
             **extra
         }
