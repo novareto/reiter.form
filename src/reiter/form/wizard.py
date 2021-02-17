@@ -116,7 +116,7 @@ class ModelWizard(Wizard):
         data = {
             name: getattr(self.data, name)
             for name in model.__fields__.keys()
-            if getattr(self.data, name) is not ...
+            if getattr(self.data, name, ...) is not ...
         }
         return Step(
             index=self.current_index,
@@ -149,6 +149,10 @@ class WizardForm(FormView):
     @property
     def description(self):
         return self.current_step.model.description
+
+    @property
+    def counter(self):
+        return f"Schrit {self.wizard.current_step.index} / {len(self.wizard.steps)}"
 
     def update(self):
         self.wizard = self.factory(self.request)
