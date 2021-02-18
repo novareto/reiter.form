@@ -2,7 +2,6 @@ import collections
 import inspect
 import typing
 from dataclasses import dataclass
-from horseman.meta import Overhead
 
 
 Condition = typing.Callable[..., bool]
