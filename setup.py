@@ -8,7 +8,6 @@ install_requires = [
     'horseman',
     'reiter.form',
     'wtforms',
-    'wtforms_pydantic'
 ]
 
 test_requires = [

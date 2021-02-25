@@ -1,9 +1,9 @@
+import horseman.response
+from horseman.http import Multidict
 from pydantic import BaseModel, create_model
 from typing import Type, NamedTuple, ClassVar
 from reiter.form.form import Form, FormView
 from reiter.form.meta import Trigger
-from horseman.http import Multidict
-import horseman.response
 
 
 class ModelStep:

@@ -1,10 +1,6 @@
 from horseman.meta import Overhead
 from reiter.view.meta import View
 from reiter.form.meta import FormViewMeta
-from wtforms_pydantic import Form
-
-
-Form  # BBB: backward compatible import.
 
 
 class FormView(View, metaclass=FormViewMeta):
