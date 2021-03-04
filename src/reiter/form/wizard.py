@@ -2,8 +2,9 @@ import horseman.response
 from horseman.http import Multidict
 from pydantic import BaseModel, create_model
 from typing import Type, NamedTuple, ClassVar
-from reiter.form.form import Form, FormView
+from reiter.form.form import FormView
 from reiter.form.meta import Trigger
+from wtforms.form import BaseForm
 
 
 class ModelStep:
@@ -139,7 +140,7 @@ def is_last_step(view, request):
 
 class WizardForm(FormView):
 
-    formclass: Type[Form] = Form
+    formclass: Type[BaseForm] = BaseForm
     factory: Type[Wizard]
 
     @property
