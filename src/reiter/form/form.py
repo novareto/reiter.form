@@ -1,9 +1,9 @@
 from horseman.meta import Overhead
-from reiter.view.meta import View
+from reiter.view.meta import APIView
 from reiter.form.meta import FormViewMeta
 
 
-class FormView(View, metaclass=FormViewMeta):
+class FormView(APIView, metaclass=FormViewMeta):
 
     title: str = ""
     description: str = ""
