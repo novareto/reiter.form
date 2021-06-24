@@ -1,129 +1,58 @@
-import horseman.response
+from abc import ABC, abstractmethod, abstractproperty
 from horseman.http import Multidict
-from pydantic import BaseModel, create_model
-from typing import Type, NamedTuple, ClassVar
+from horseman.meta import Overhead
+from typing import Any, Type, NamedTuple, ClassVar, Tuple, NoReturn, Dict
 from reiter.form.form import FormView
 from reiter.form.meta import Trigger
-from wtforms.form import BaseForm
+from wtforms import BaseForm, Field
 
 
-class ModelStep:
-
-    def __init__(self, name: str, model: BaseModel, title: str, desc: str):
-        self.model = model
-        self.name = name
-        self.title = title
-        self.desc = desc
-
-    def select(self, *names):
-        fields = {
-            name: (self.model.__fields__[name].type_,
-                   self.model.__fields__[name].field_info)
-            for name in names
-        }
-        return create_model(
-            self.name,
-            title=(ClassVar[str], self.title),
-            description=(ClassVar[str], self.desc),
-            **fields
-        )
-
-    def omit(self, *names):
-        fields = {
-            name: (self.model.__fields__[name].type_,
-                   self.model.__fields__[name].field_info)
-            for name in self.model.__fields__.keys()
-            if name not in names
-        }
-        return create_model(
-            self.name,
-            title=(ClassVar[str], self.title),
-            description=(ClassVar[str], self.desc),
-            **fields
-        )
+StepData = Dict[str: Any]
+WizardData = Dict[int, StepData]
 
 
 class Step(NamedTuple):
     index: int
-    model: BaseModel
-    data: dict
-
-    def __call__(self, data=None):
-        if data is not None:
-            return self.model(**data)
-        return self.model(**self.data)
+    data: StepData
+    title: str
+    description: str
+    fields: Dict[str, Field]
 
 
-class Wizard:
+class Wizard(ABC):
 
-    session_key: ClassVar[str]
-    steps: ClassVar[tuple]
-
-    @staticmethod
-    def step(request):
-        if 'step' in request.query:
-            return request.query.int('step')
-        return 1
+    data: WizardData
+    current_index: int
+    request:Overhead
+    steps: ClassVar[Tuple[Step]]
 
     def __init__(self, request):
         self.request = request
-        self.current_index = self.step(request)
-        assert self.current_index <= len(self.steps)
         self.data = self.get_data()
+        self.current_index = self.step(request)
+        self.current_step = self.steps[self.current_index]._replace(
+            data=self.data.get(self.current_index, {})
+        )
 
-    def get_data(self):
-        return self.request.session.get(self.session_key, {})
+    @abstractmethod
+    def step(self, request) -> int:
+        pass
 
-    def save_step(self, data: dict):
-        self.data[self.current_index] = data
-        self.request.session[self.session_key] = self.data
-        self.request.session.save()
+    @abstractmethod
+    def get_data(self) -> WizardData:
+        pass
 
-    def save(self, data: dict):
+    @abstractmethod
+    def save_step(self, data: StepData) -> NoReturn:
+        pass
+
+    @abstractmethod
+    def conclude(self) -> NoReturn:
+        pass
+
+    def save(self, data: StepData) -> NoReturn:
         self.save_step(data)
         return self.conclude()
-
-    def conclude(self) -> horseman.response.Response:
-        raise NotImplementedError()
-
-    @property
-    def current_step(self):
-        data = self.data.get(self.current_index, {})
-        return Step(
-            index=self.current_index,
-            model=self.steps[self.current_index - 1],
-            data=data
-        )
-
-
-class ModelWizard(Wizard):
-    model: Type[BaseModel]
-
-    def get_data(self):
-        data = self.request.session.get(self.session_key)
-        if data is None:
-            return self.model()
-        return self.model.construct(**data)
-
-    def save_step(self, data: dict):
-        for name, value in data.items():
-            setattr(self.data, name, value)
-        self.request.session[self.session_key] = self.data.dict()
-        self.request.session.save()
-
-    @property
-    def current_step(self):
-        model = self.steps[self.current_index - 1]
-        data = {
-            name: getattr(self.data, name)
-            for name in model.__fields__.keys()
-            if getattr(self.data, name, ...) is not ...
-        }
-        return Step(
-            index=self.current_index,
-            model=model,
-            data=data
-        )
 
 
 def is_not_first_step(view, request):
@@ -140,27 +69,20 @@ def is_last_step(view, request):
 
 class WizardForm(FormView):
 
-    formclass: Type[BaseForm] = BaseForm
+    formclass: Type[BaseForm]
     factory: Type[Wizard]
 
-    @property
-    def title(self):
-        return self.current_step.model.title
-
-    @property
-    def description(self):
-        return self.current_step.model.description
-
-    @property
-    def counter(self):
-        return f"Schrit {self.wizard.current_step.index} / {len(self.wizard.steps)}"
+    def redirect_to_step(self, step: int):
+        raise NotImplementedError('Implement your own.')
 
     def update(self):
-        self.wizard = self.factory(self.request)
-        self.current_step = self.wizard.current_step
+        self.wizard: Wizard = self.factory(self.request)
+        self.current_step: Step = self.wizard.current_step
+        self.description = self.current_step.description
+        self.title = self.current_step.title
 
     def setupForm(self, formdata=Multidict()):
-        form = self.formclass.from_model(self.current_step.model)
+        form = self.formclass(self.current_step.fields)
         form.process(data=self.current_step.data, formdata=formdata)
         return form
 
@@ -168,9 +90,7 @@ class WizardForm(FormView):
         "previous", "Previous", order=1, css="btn btn-secondary",
         condition=is_not_first_step)
     def previous(self, request, data):
-        return horseman.response.redirect(
-            f"{request.route.path}?step={self.current_step.index - 1}"
-        )
+        return self.redirect_to_step(self.current_step.index - 1)
 
     @Trigger.trigger(
         "Next", "Next", order=2, css="btn btn-primary",
@@ -180,9 +100,7 @@ class WizardForm(FormView):
         if not form.validate():
             return {'form': form, 'wizard': self.wizard}
         self.wizard.save_step(data.form.dict())
-        return horseman.response.redirect(
-            f"{request.route.path}?step={self.current_step.index + 1}"
-        )
+        return self.redirect_to_step(self.current_step.index + 1)
 
     @Trigger.trigger(
         "finish", "Finish", order=2, css="btn btn-primary",

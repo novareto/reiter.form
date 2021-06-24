@@ -260,7 +260,32 @@ class TestTriggerScope:
             ),
         }
 
-    def test_triggers_override(self):
+    def test_triggers_inheritance_override(self):
+
+        class Base(metaclass=TriggersScope):
+
+            @Trigger.trigger(title='Title')
+            def do_something(item):
+                return 'I did something'
+
+        class Edit(Base):
+
+            @Trigger.trigger(title='Title')
+            def do_something(item):
+                return 'I did something else'
+
+        assert Edit.triggers == {
+            'trigger.do_something': Trigger(
+                id='trigger.do_something',
+                title='Title',
+                method=Edit.do_something,
+                css='',
+                order=10,
+                condition=None
+            )
+        }
+
+    def test_triggers_direct_override(self):
 
         class Base(metaclass=TriggersScope):
 
