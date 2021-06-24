@@ -20,10 +20,10 @@ class Trigger:
         return self.method(*args, **kwargs)
 
     @classmethod
-    def trigger(cls, id, title, css="", order=10, condition=None):
+    def trigger(cls, title, css="", order=10, condition=None):
         def mark_as_trigger(func):
             func.trigger = cls(
-                id=f'trigger.{id}',
+                id=f'trigger.{func.__name__}',
                 title=title,
                 css=css,
                 method=func,
@@ -34,22 +34,39 @@ class Trigger:
         return mark_as_trigger
 
     @staticmethod
-    def triggers(cls):
+    def triggers(cls: typing.Type):
         for name, func in inspect.getmembers(cls, predicate=(
                 lambda x: inspect.isfunction(x) and hasattr(x, 'trigger'))):
-            yield func.trigger.id, func.trigger
+            yield func.trigger
 
 
-class FormViewMeta(type):
+class Triggers(collections.OrderedDict):
 
-    def __init__(cls, name, bases, attrs):
-        type.__init__(cls, name, bases, attrs)
-        cls.triggers = None
+    def __setitem__(self, name, value):
+        assert isinstance(name, str)
+        assert isinstance(value, Trigger)
+        super().__setitem__(name, value)
 
-    def __call__(cls, *args, **kwargs):
-        if cls.triggers is None:
-            triggers = list(Trigger.triggers(cls))
-            triggers.sort(key=lambda trigger: trigger[1].order)
-            cls.triggers = collections.OrderedDict(triggers)
+    def filtered(self, *args, **kwargs):
+        for name, trigger in self.items():
+            if trigger.condition and not trigger.condition(*args, **kwargs):
+                continue
+            yield name, trigger
 
-        return type.__call__(cls, *args, **kwargs)
+
+class TriggersScope(type):
+
+    def __new__(cls, name, bases, attrs):
+        if not 'triggers' in attrs:
+            triggers = []
+            for base in bases:
+                triggers.extend(list(Trigger.triggers(base)))
+
+            for attr, value in attrs.items():
+                if inspect.isfunction(value) and hasattr(value, 'trigger'):
+                    triggers.append(value.trigger)
+            triggers.sort(key=lambda trigger: trigger.order)
+            attrs['triggers'] = Triggers(
+                ((trigger.id, trigger) for trigger in triggers)
+            )
+        return type.__new__(cls, name, bases, attrs)
