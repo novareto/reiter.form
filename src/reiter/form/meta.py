@@ -20,10 +20,10 @@ class Trigger:
         return self.method(*args, **kwargs)
 
     @classmethod
-    def trigger(cls, title, css="", order=10, condition=None):
+    def trigger(cls, title, name=None, css="", order=10, condition=None):
         def mark_as_trigger(func):
             func.trigger = cls(
-                id=f'trigger.{func.__name__}',
+                id=f'trigger.{name or func.__name__}',
                 title=title,
                 css=css,
                 method=func,
