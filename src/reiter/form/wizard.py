@@ -99,7 +99,7 @@ class WizardForm(FormView):
         form = self.setupForm(formdata=data.form)
         if not form.validate():
             return {'form': form, 'wizard': self.wizard}
-        self.wizard.save_step(data.form.dict())
+        self.wizard.save_step(form.data)
         return self.redirect_to_step(self.current_step.index + 1)
 
     @Trigger.trigger(
@@ -109,4 +109,4 @@ class WizardForm(FormView):
         form = self.setupForm(formdata=data.form)
         if not form.validate():
             return {'form': form, 'wizard': self.wizard}
-        return self.wizard.save(data.form.dict())
+        return self.wizard.save(form.data)
