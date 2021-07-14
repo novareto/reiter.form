@@ -21,7 +21,7 @@ class FormView(APIView, metaclass=TriggersScope):
         if (trigger := self.triggers.get(action)) is not None:
             if trigger.condition and not trigger.condition(self, request):
                 raise RuntimeError('Action is not allowed.')
-            return trigger(self, self.request, self.request.get_data())
+            return trigger(self, self.request.get_data())
         raise LookupError("No action found")
 
     def namespace(self, **extra):
